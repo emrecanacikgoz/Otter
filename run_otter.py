@@ -14,7 +14,7 @@ from src.otter_ai.models.otter.modeling_otter import OtterForConditionalGenerati
 #from src.otter_ai.models.otter.modeling_otter import OtterModel
 
 
-MODELS = ("microsoft/xclip-base-patch32",)
+MODELS = ("luodian/OTTER-9B-DenseCaption",)
 
 
 def sample_frame_indices(clip_len, frame_sample_rate, seg_len):
@@ -183,47 +183,12 @@ def main(
         downsampled = downsampled.unsqueeze(0).unsqueeze(0)
 
         # pre-process text
-        lang_x = model.text_tokenizer([item['raw_texts']], return_tensors="pt", padding=True)
-        #print(f"\naw_texts: {item['raw_texts']}")
-        #print(f"lang_x: {lang_x['input_ids']}\n{lang_x['input_ids'].shape}")
-        
-        # skip samples to avoid padding
-        input_ids_list = lang_x['input_ids'].squeeze(0).tolist()
-        eos_index = input_ids_list.index(29889)
-        caption_ids = lang_x['input_ids'][0:1, :eos_index+1]
-        foil_ids = lang_x['input_ids'][0:1, eos_index+1:]
-        if caption_ids.shape[-1] != foil_ids.shape[-1]:
-            print(f"skipping sample: {item['item_id']} with id: {item['index']}...")
-            continue
-
-        # # apply padding if necessary
-        # if caption_ids.shape[-1] > foil_ids.shape[-1]:
-        #     print("zero padding foils...")
-        #     pad_token_id = tokenizer.pad_token_id
-        #     diff = abs(caption_ids.shape[-1] - foil_ids.shape[-1])
-        #     foil_ids = foil_ids.squeeze(0).tolist()
-        #     foil_ids = foil_ids + [pad_token_id] * diff
-        #     foil_ids = torch.tensor(foil_ids, dtype=torch.long).unsqueeze(0)
-        # elif caption_ids.shape[-1] < foil_ids.shape[-1]:
-        #     print("zero padding caption...")
-        #     pad_token_id = tokenizer.pad_token_id
-        #     print(f"pad_token_id: {pad_token_id}")
-        #     diff = abs(caption_ids.shape[-1] - foil_ids.shape[-1])
-        #     print(f"diff: {diff}")
-        #     caption_ids = caption_ids.squeeze(0).tolist()
-        #     caption_ids = caption_ids + [pad_token_id] * diff
-        #     print(caption_ids)
-        #     caption_ids = torch.tensor(caption_ids, dtype=torch.long).unsqueeze(0)
-        # print(f"caption_ids: {caption_ids}\n{caption_ids.shape}")
-        # print(f"foil_ids: {foil_ids}\n{foil_ids.shape}")
-        # lang_x['input_ids'] = torch.cat([caption_ids, foil_ids], dim=0)
-        # print(f"lang_x: {lang_x['input_ids']}\n{lang_x['input_ids'].shape}")
-        lang_x['input_ids'] = lang_x['input_ids'].view(2, -1)
+        print(f"raw_texts: {item['raw_texts']}")
+        lang_x = model.text_tokenizer(item['raw_texts'], return_tensors="pt", padding=True)
         lang_x["input_ids"] = lang_x["input_ids"].unsqueeze(0).repeat_interleave(num_frames, dim=0)
         lang_x['input_ids'] = lang_x['input_ids'].reshape(-1, lang_x['input_ids'].shape[-1])
-
+        
         # pre-process mask
-        lang_x['attention_mask'] = lang_x['attention_mask'].view(2, -1)
         lang_x['attention_mask'] = lang_x['attention_mask'].unsqueeze(0).repeat_interleave(num_frames, dim=0)
         lang_x['attention_mask'] = lang_x['attention_mask'].reshape(-1, lang_x['attention_mask'].shape[-1])
 
